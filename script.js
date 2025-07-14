@@ -1,3 +1,4 @@
+import { submitScore, loadLeaderboard } from './firebase_leaderboard.js';
 
 let canvas, ctx;
 let doodle, platforms, score, isGameOver, enemies;
@@ -89,12 +90,15 @@ async function showLeaderboard() {
   leaderboardTable.innerHTML = "<tr><th>#</th><th>Name</th><th>Score</th></tr>";
 
   try {
-    const res = await fetch("http://173.212.248.252:8000/leaderboard");
-    const data = await res.json();
-
-    data.slice(0, 10).forEach((entry, i) => {
+    const data = await loadLeaderboard();
+    data.forEach((entry, i) => {
       const row = leaderboardTable.insertRow();
       row.innerHTML = `<td>${i + 1}</td><td>${entry.name}</td><td>${entry.score}</td>`;
+    });
+  } catch (err) {
+    leaderboardTable.innerHTML += `<tr><td colspan='3'>Failed to load</td></tr>`;
+  }
+}</td><td>${entry.score}</td>`;
     });
   } catch (err) {
     leaderboardTable.innerHTML += `<tr><td colspan='3'>Failed to load</td></tr>`;
@@ -335,6 +339,12 @@ function gameLoop() {
 
 
 async function sendScoreToServer(name, score) {
+  try {
+    await submitScore(name, score);
+  } catch (err) {
+    console.error("Failed to send score:", err);
+  }
+} // override
   try {
     await fetch("http://173.212.248.252:8000/score", {
       method: "POST",
