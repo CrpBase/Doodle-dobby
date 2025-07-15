@@ -1,0 +1,1 @@
+export const submitScore = () => {}; export const loadLeaderboard = async () => [];
