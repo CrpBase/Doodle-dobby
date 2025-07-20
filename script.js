@@ -292,42 +292,50 @@ function update() {
 
     platforms.push(createPlatform(Math.random() * 330, lastY - 100, type));
 
-    if (score > 10000 && enemies.length < 2) {
-      function canSpawnEnemy(x, y) {
-        return !platforms.some(p =>
-          x + 40 > p.x && x < p.x + p.width &&
-          y + 40 > p.y && y < p.y + p.height + 20
-        );
-      }
-
-      let randX = Math.random() * 360;
-      let randY1 = lastY - 100;
-      let randY2 = lastY - 200;
-
-      if (Math.random() < 0.025 && canSpawnEnemy(randX, randY1)) {
-        enemies.push({
-          x: randX,
-          y: randY1,
-          width: 40,
-          height: 40,
-          type: 'hole',
-        });
-      }
-
-      randX = Math.random() * 360;
-      if (Math.random() < 0.025 && canSpawnEnemy(randX, randY2)) {
-        enemies.push({
-          x: randX,
-          y: randY2,
-          width: 40,
-          height: 40,
-          type: 'fast',
-          baseX: 0,
-          direction: 1,
-        });
-      }
-    }
+   // ==== Spawn enemies only after 10000 score ====
+if (score > 10000 && enemies.length < 2) {
+  function canSpawnEnemy(x, y) {
+    return !platforms.some(p =>
+      x + 40 > p.x && x < p.x + p.width &&
+      y + 40 > p.y && y < p.y + p.height + 20
+    );
   }
+
+  let randX = Math.random() * 360;
+  let randY1 = lastY - 100;
+  let randY2 = lastY - 200;
+
+  // Збільшуємо шанс для босів з ростом рахунку
+  let bossChance = 0.025;
+  if (score > 20000) bossChance = 0.05;
+  if (score > 30000) bossChance = 0.09;
+
+  // 'hole'
+  if (Math.random() < 0.025 && canSpawnEnemy(randX, randY1)) {
+    enemies.push({
+      x: randX,
+      y: randY1,
+      width: 40,
+      height: 40,
+      type: 'hole',
+    });
+  }
+
+  randX = Math.random() * 360;
+  // 'fast' (бос)
+  if (Math.random() < bossChance && canSpawnEnemy(randX, randY2)) {
+    enemies.push({
+      x: randX,
+      y: randY2,
+      width: 40,
+      height: 40,
+      type: 'fast',
+      baseX: 0,
+      direction: 1,
+    });
+  }
+}
+
 
   platforms = platforms.filter(p => p.y < 600);
 
