@@ -16,6 +16,9 @@ music.loop = true;
 const springImg = new Image();
 springImg.src = "assets/pr.png";
 
+const jumpImg = new Image();
+jumpImg.src = "assets/jp.png";
+
 window.addEventListener("load", () => {
   const savedName = localStorage.getItem("playerName");
   if (!savedName) {
@@ -193,8 +196,14 @@ function drawPlatforms() {
   });
 }
 
+// Ось тут головна зміна!
 function drawDoodle() {
-  ctx.drawImage(doodle.img, doodle.x, doodle.y, doodle.width, doodle.height);
+  // Якщо у повітрі — jp.png, якщо стоїть — doodle.png
+  if (doodle.vy !== 0) {
+    ctx.drawImage(jumpImg, doodle.x, doodle.y, doodle.width, doodle.height);
+  } else {
+    ctx.drawImage(doodle.img, doodle.x, doodle.y, doodle.width, doodle.height);
+  }
 }
 
 function update() {
@@ -282,7 +291,6 @@ function update() {
 
     platforms.push(createPlatform(Math.random() * 330, lastY - 100, type));
 
-    // ==== Spawn enemies only after 10000 score ====
     if (score > 10000 && enemies.length < 2) {
       function canSpawnEnemy(x, y) {
         return !platforms.some(p =>
