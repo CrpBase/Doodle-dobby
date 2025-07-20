@@ -13,6 +13,9 @@ const music = new Audio('assets/music.mp3');
 const loseSound = new Audio('assets/ooh.mp3');
 music.loop = true;
 
+const springImg = new Image();
+springImg.src = "assets/pr.png";
+
 window.addEventListener("load", () => {
   const savedName = localStorage.getItem("playerName");
   if (!savedName) {
@@ -35,6 +38,22 @@ window.addEventListener("load", () => {
   document.getElementById("menuBtn").addEventListener("click", showMenu);
   document.getElementById("leaderboardBtn").addEventListener("click", showLeaderboard);
   document.getElementById("backToMenuBtn").addEventListener("click", showMenu);
+
+  // touch-based movement
+  const canvas = document.getElementById("gameCanvas");
+  canvas.addEventListener("touchstart", e => {
+    const rect = canvas.getBoundingClientRect();
+    const touchX = e.touches[0].clientX - rect.left;
+    const canvasMid = rect.width / 2;
+    keys.left = touchX < canvasMid;
+    keys.right = touchX >= canvasMid;
+  });
+
+  canvas.addEventListener("touchend", e => {
+    keys.left = false;
+    keys.right = false;
+  });
+
 });
 
 document.addEventListener("keydown", e => {
@@ -105,7 +124,8 @@ function init() {
     vy: 0,
     gravity: 0.2,
     jump: -10,
-    img: new Image()
+    img: new Image(),
+    isSpringJump: false
   };
   doodle.img.src = 'assets/doodle.png';
 
@@ -135,10 +155,10 @@ function createPlatform(x, y, type = "normal") {
 function createInitialPlatforms() {
   let y = 600;
   for (let i = 0; i < 6; i++) {
-    platforms.push(createPlatform(Math.random() * 330, y));
+    platforms.push(createPlatform(Math.random() * 330, y, "normal"));
     y -= 100;
   }
-  platforms.push(createPlatform(200, 550));
+  platforms.push(createPlatform(200, 550, "normal"));
 }
 
 function updatePlatforms() {
@@ -160,8 +180,7 @@ function drawPlatforms() {
     ctx.fillRect(p.x, p.y, p.width, p.height);
 
     if (p.spring) {
-      ctx.fillStyle = "#0f0";
-      ctx.fillRect(p.x + p.width / 2 - 5, p.y - 10, 10, 10);
+      ctx.drawImage(springImg, p.x + p.width / 2 - 10, p.y - 20, 20, 20);
     }
 
     if (p.type === "broken") {
@@ -203,10 +222,12 @@ function update() {
         doodle.vy = doodle.jump * 1.8;
         springSound.currentTime = 0;
         springSound.play();
+        doodle.isSpringJump = true;
       } else {
         doodle.vy = doodle.jump;
         jumpSound.currentTime = 0;
         jumpSound.play();
+        doodle.isSpringJump = false;
       }
     }
   });
@@ -223,7 +244,80 @@ function update() {
 
   while (platforms.length < 12) {
     const lastY = Math.min(...platforms.map(p => p.y));
-    platforms.push(createPlatform(Math.random() * 330, lastY - 100));
+    const last = platforms[platforms.length - 1];
+
+    let type = "normal";
+    const chance = Math.random();
+
+    let seriesChance = 0;
+    if (score > 5000) seriesChance = 0.06;
+    else if (score > 3000) seriesChance = 0.04;
+    else if (score > 1000) seriesChance = 0.02;
+
+    if (Math.random() < seriesChance) {
+      const count = Math.floor(Math.random() * 8) + 3;
+      const types = ["once", "moving"];
+      for (let i = 0; i < count; i++) {
+        const alternatingType = types[i % types.length];
+        platforms.push(createPlatform(Math.random() * 330, lastY - 100 - i * 100, alternatingType));
+      }
+      break;
+    }
+
+    if (score < 1000) {
+      type = "normal";
+    } else if (score < 3000) {
+      if (chance < 0.15) type = "moving";
+    } else {
+      const brokenChance = score > 6000 ? 0.3 : 0.2;
+      if (last?.type === "broken") {
+        if (chance < 0.2) type = "moving";
+        else if (chance < 0.4) type = "once";
+      } else {
+        if (chance < 0.15) type = "moving";
+        else if (chance < 0.15 + brokenChance) type = "broken";
+        else if (chance < 0.15 + brokenChance + 0.1) type = "once";
+      }
+    }
+
+    platforms.push(createPlatform(Math.random() * 330, lastY - 100, type));
+
+    // ==== Spawn enemies only after 10000 score ====
+    if (score > 10000 && enemies.length < 2) {
+      function canSpawnEnemy(x, y) {
+        return !platforms.some(p =>
+          x + 40 > p.x && x < p.x + p.width &&
+          y + 40 > p.y && y < p.y + p.height + 20
+        );
+      }
+
+      let randX = Math.random() * 360;
+      let randY1 = lastY - 100;
+      let randY2 = lastY - 200;
+
+      if (Math.random() < 0.025 && canSpawnEnemy(randX, randY1)) {
+        enemies.push({
+          x: randX,
+          y: randY1,
+          width: 40,
+          height: 40,
+          type: 'hole',
+        });
+      }
+
+      randX = Math.random() * 360;
+      if (Math.random() < 0.025 && canSpawnEnemy(randX, randY2)) {
+        enemies.push({
+          x: randX,
+          y: randY2,
+          width: 40,
+          height: 40,
+          type: 'fast',
+          baseX: 0,
+          direction: 1,
+        });
+      }
+    }
   }
 
   platforms = platforms.filter(p => p.y < 600);
@@ -250,7 +344,10 @@ function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawPlatforms();
   drawDoodle();
+  drawEnemies();
   update();
+  updateEnemies();
+  checkEnemyCollision();
   handleMovement();
   updatePlatforms();
   requestAnimationFrame(gameLoop);
@@ -274,5 +371,49 @@ function showGameOverMenu() {
   document.getElementById("game").style.display = "none";
   document.getElementById("gameOver").style.display = "block";
   const bestDisplay = localStorage.getItem("bestScore") || score;
-  document.getElementById("scoreDisplay").innerText = "Score: " + score + "\nBest: " + bestDisplay;
+  document.getElementById("scoreDisplay").innerText = "Score: " + score + "\\nBest: " + bestDisplay;
+}
+
+function drawEnemies() {
+  enemies.forEach(e => {
+    if (e.type === 'hole') {
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.arc(e.x + e.width/2, e.y + e.height/2, e.width/2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#444";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = e.type === 'slow' ? "#600" : "#d00";
+      ctx.beginPath();
+      ctx.arc(e.x + e.width/2, e.y + e.height/2, e.width/2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+function updateEnemies() {
+  enemies.forEach(e => {
+    if (e.type === 'fast') {
+      e.baseX = e.baseX || e.x;
+      e.x += 2.5 * e.direction;
+      if (Math.abs(e.x - e.baseX) > 10) e.direction *= -1;
+    }
+  });
+}
+
+function checkEnemyCollision() {
+  if (doodle.isSpringJump) return;
+  enemies.forEach(e => {
+    if (
+      doodle.x < e.x + e.width &&
+      doodle.x + doodle.width > e.x &&
+      doodle.y < e.y + e.height &&
+      doodle.y + doodle.height > e.y
+    ) {
+      isGameOver = true;
+      showGameOverMenu();
+    }
+  });
 }
