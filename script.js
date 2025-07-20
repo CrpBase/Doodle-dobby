@@ -196,10 +196,8 @@ function drawPlatforms() {
   });
 }
 
-// Ось тут головна зміна!
 function drawDoodle() {
-  // Якщо у повітрі — jp.png, якщо стоїть — doodle.png
-  if (doodle.vy !== 0) {
+  if (doodle.vy < 0) {
     ctx.drawImage(jumpImg, doodle.x, doodle.y, doodle.width, doodle.height);
   } else {
     ctx.drawImage(doodle.img, doodle.x, doodle.y, doodle.width, doodle.height);
