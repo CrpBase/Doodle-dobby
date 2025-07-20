@@ -83,6 +83,8 @@ function startGame() {
   document.getElementById("leaderboard").style.display = "none";
   music.currentTime = 0;
   music.play();
+  olgSound.currentTime = 0;
+  olgSound.play();
   init();
 }
 
