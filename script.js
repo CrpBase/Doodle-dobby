@@ -371,7 +371,7 @@ function showGameOverMenu() {
   document.getElementById("game").style.display = "none";
   document.getElementById("gameOver").style.display = "block";
   const bestDisplay = localStorage.getItem("bestScore") || score;
-  document.getElementById("scoreDisplay").innerText = "Score: " + score + "\\nBest: " + bestDisplay;
+  document.getElementById("scoreDisplay").innerHTML = "Score: " + score + "<br>Best: " + bestDisplay;
 }
 
 function drawEnemies() {
