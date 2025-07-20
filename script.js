@@ -7,6 +7,7 @@ let velocityX = 0;
 const acceleration = 0.4;
 const maxSpeed = 3.5;
 
+const olgSound = new Audio('assets/olg.mp3');
 const jumpSound = new Audio('assets/jump.mp3');
 const springSound = new Audio('assets/spring.mp3');
 const music = new Audio('assets/music.mp3');
